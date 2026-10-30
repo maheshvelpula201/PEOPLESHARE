@@ -1,13 +1,12 @@
-﻿from logging.config import fileConfig
+﻿
+from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import settings
 from app.db.base import Base
-
-# Import models here as they are added so Alembic can detect their tables.
-# from app.models import company, user, department, team
+import app.models  # Register all models with Base.metadata
 
 config = context.config
 
