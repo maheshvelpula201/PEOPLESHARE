@@ -43,6 +43,11 @@ from app.models.leave_approval_event import (
     LeaveApprovalEvent,
     LeaveApprovalEventType,
 )
+from app.models.admin_activation_token import (
+    AdminActivationToken,
+    ActivationTokenStatus,
+    ActivationDeliveryStatus,
+)
 
 __all__ = [
     "Company",
@@ -84,4 +89,7 @@ __all__ = [
     "LeaveRequestStatus",
     "LeaveApprovalEvent",
     "LeaveApprovalEventType",
+    "AdminActivationToken",
+    "ActivationTokenStatus",
+    "ActivationDeliveryStatus",
 ]

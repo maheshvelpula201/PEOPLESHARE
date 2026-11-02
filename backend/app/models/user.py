@@ -32,6 +32,12 @@ class AccountStatus(str, Enum):
     DEACTIVATED = "deactivated"
 
 
+class AccountOrigin(str, Enum):
+    REGISTRATION = "registration"
+    INVITATION = "invitation"
+    OWNER_PROVISIONING = "owner_provisioning"
+
+
 class User(Base):
     """A login identity belonging to exactly one company."""
 
@@ -102,6 +108,19 @@ class User(Base):
         ),
         default=AccountStatus.PENDING_ACTIVATION,
         server_default=AccountStatus.PENDING_ACTIVATION.value,
+        nullable=False,
+    )
+
+    account_origin: Mapped[AccountOrigin] = mapped_column(
+        SQLAlchemyEnum(
+            AccountOrigin,
+            name="account_origin",
+            values_callable=lambda enum_class: [
+                item.value for item in enum_class
+            ],
+        ),
+        default=AccountOrigin.INVITATION,
+        server_default=AccountOrigin.INVITATION.value,
         nullable=False,
     )
 

@@ -3,6 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.user import (
+    AccountOrigin,
     AccountStatus,
     User,
     UserRole,
@@ -20,6 +21,7 @@ class UserRepository:
         password_hash: str,
         role: UserRole,
         account_status: AccountStatus = AccountStatus.PENDING_ACTIVATION,
+        account_origin: AccountOrigin = AccountOrigin.INVITATION,
     ) -> User:
         user = User(
             company_id=company_id,
@@ -27,6 +29,7 @@ class UserRepository:
             password_hash=password_hash,
             role=role,
             account_status=account_status,
+            account_origin=account_origin,
         )
 
         db.add(user)

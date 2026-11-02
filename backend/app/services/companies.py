@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
-from app.models.user import AccountStatus, UserRole
+from app.models.user import AccountOrigin, AccountStatus, UserRole
 from app.repositories.companies import CompanyRepository
 from app.repositories.users import UserRepository
 from app.schemas.company import (
@@ -29,7 +29,6 @@ class CompanyService:
         ascii_name = normalized.encode("ascii", "ignore").decode("ascii")
         slug = re.sub(r"[^a-zA-Z0-9]+", "-", ascii_name)
         slug = slug.strip("-").lower()
-
         slug = slug[:100].strip("-")
 
         return slug or "company"
@@ -57,7 +56,6 @@ class CompanyService:
         registration: CompanyRegistrationRequest,
     ) -> CompanyRegistrationResponse:
 
-        # Hash the password only once, even if slug retries are needed.
         password_hash = hash_password(registration.password)
 
         for attempt in range(CompanyService.MAX_SLUG_ATTEMPTS):
@@ -68,7 +66,6 @@ class CompanyService:
             )
 
             try:
-                # Create the company.
                 company = CompanyRepository.create(
                     db,
                     name=registration.company_name,
@@ -76,7 +73,6 @@ class CompanyService:
                     timezone_name=registration.timezone_name,
                 )
 
-                # Create its initial Company Admin.
                 admin = UserRepository.create(
                     db,
                     company_id=company.id,
@@ -84,9 +80,9 @@ class CompanyService:
                     password_hash=password_hash,
                     role=UserRole.COMPANY_ADMIN,
                     account_status=AccountStatus.PENDING_ACTIVATION,
+                    account_origin=AccountOrigin.REGISTRATION,
                 )
 
-                # Commit both records in one transaction.
                 db.commit()
 
                 return CompanyRegistrationResponse(
@@ -106,16 +102,16 @@ class CompanyService:
                 original_error = exc.orig
                 error_details = getattr(original_error, "diag", None)
                 violated_constraint = getattr(
-                error_details,
-                "constraint_name",
-                None,
+                    error_details,
+                    "constraint_name",
+                    None,
                 )
 
                 if violated_constraint == "ix_companies_slug":
                     continue
 
                 raise CompanyRegistrationConflict(
-                "Company registration conflicts with existing data."
+                    "Company registration conflicts with existing data."
                 ) from exc
 
             except Exception:

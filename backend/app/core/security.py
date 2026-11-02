@@ -1,4 +1,7 @@
 
+import hashlib
+import secrets
+
 from pwdlib import PasswordHash
 
 
@@ -6,16 +9,18 @@ password_hash = PasswordHash.recommended()
 
 
 def hash_password(password: str) -> str:
-    """Securely hash a plain-text password."""
     return password_hash.hash(password)
 
 
-def verify_password(
-    plain_password: str,
-    hashed_password: str,
-) -> bool:
-    """Verify a plain-text password against its stored hash."""
-    return password_hash.verify(
-        plain_password,
-        hashed_password,
-    )
+def verify_password(password: str, hashed_password: str) -> bool:
+    return password_hash.verify(password, hashed_password)
+
+
+def generate_admin_activation_token() -> str:
+    """Generate a cryptographically secure activation token."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_admin_activation_token(token: str) -> str:
+    """Return the SHA-256 hash of an activation token."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
