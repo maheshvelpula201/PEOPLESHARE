@@ -1,4 +1,4 @@
-﻿
+﻿import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -8,15 +8,23 @@ from app.core.config import settings
 from app.db.base import Base
 import app.models  # Register all models with Base.metadata
 
+
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Use the application database URL without storing credentials in alembic.ini.
+
+# Use TEST_DATABASE_URL when explicitly supplied.
+# Otherwise, use the normal application database URL.
+database_url = (
+    os.environ.get("TEST_DATABASE_URL")
+    or settings.database_url.get_secret_value()
+)
+
 config.set_main_option(
     "sqlalchemy.url",
-    settings.database_url.get_secret_value().replace("%", "%%"),
+    database_url.replace("%", "%%"),
 )
 
 target_metadata = Base.metadata
@@ -24,10 +32,8 @@ target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Generate SQL without opening a database connection."""
-    url = settings.database_url.get_secret_value()
-
     context.configure(
-        url=url,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -55,6 +61,8 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+
+    connectable.dispose()
 
 
 if context.is_offline_mode():

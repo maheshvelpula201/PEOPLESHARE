@@ -1,11 +1,16 @@
-
+import logging
 import re
 import unicodedata
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
+from app.core.security import generate_email_otp, hash_email_otp, hash_password
+from app.models.email_verification_otp import (
+    EmailVerificationOTP,
+    OTPDeliveryStatus,
+)
 from app.models.user import AccountOrigin, AccountStatus, UserRole
 from app.repositories.companies import CompanyRepository
 from app.repositories.users import UserRepository
@@ -13,6 +18,10 @@ from app.schemas.company import (
     CompanyRegistrationRequest,
     CompanyRegistrationResponse,
 )
+from app.services.email import send_admin_verification_otp_email
+
+
+logger = logging.getLogger(__name__)
 
 
 class CompanyRegistrationConflict(Exception):
@@ -83,6 +92,44 @@ class CompanyService:
                     account_origin=AccountOrigin.REGISTRATION,
                 )
 
+                # Generate a secure six-digit OTP.
+                otp = generate_email_otp()
+
+                # Store only its HMAC hash in the database.
+                otp_record = EmailVerificationOTP(
+                    company_id=company.id,
+                    user_id=admin.id,
+                    otp_hash=hash_email_otp(otp),
+                    expires_at=datetime.now(timezone.utc)
+                    + timedelta(minutes=5),
+                    delivery_status=OTPDeliveryStatus.PENDING,
+                )
+
+                db.add(otp_record)
+
+                # Save company, admin and OTP together.
+                db.commit()
+
+                # Send email only after the database transaction succeeds.
+                try:
+                    send_admin_verification_otp_email(
+                        recipient_email=admin.normalized_email,
+                        otp=otp,
+                    )
+
+                    otp_record.delivery_status = OTPDeliveryStatus.SENT
+                    otp_record.delivered_at = datetime.now(timezone.utc)
+
+                except Exception:
+                    logger.exception(
+                        "Failed to send registration OTP to %s",
+                        admin.normalized_email,
+                    )
+
+                    otp_record.delivery_status = OTPDeliveryStatus.FAILED
+                    otp_record.delivered_at = None
+
+                # Save the email delivery result.
                 db.commit()
 
                 return CompanyRegistrationResponse(

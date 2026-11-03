@@ -48,6 +48,10 @@ from app.models.admin_activation_token import (
     ActivationTokenStatus,
     ActivationDeliveryStatus,
 )
+from app.models.email_verification_otp import (
+    EmailVerificationOTP,
+    OTPDeliveryStatus,
+)
 
 __all__ = [
     "Company",
@@ -92,4 +96,6 @@ __all__ = [
     "AdminActivationToken",
     "ActivationTokenStatus",
     "ActivationDeliveryStatus",
+    "EmailVerificationOTP",
+    "OTPDeliveryStatus",
 ]
